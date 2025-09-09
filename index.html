@@ -3,114 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的烹饪日记</title>
-    <!-- 引入 Tailwind CSS 以便快速构建美观的界面 -->
+    <title>我的烹饪日记 (云同步版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Google Fonts 的 Inter 字体，让页面更好看 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 自定义一些基础样式 */
-        body {
-            font-family: 'Inter', sans-serif;
-            touch-action: manipulation; /* 优化移动端触摸体验 */
-        }
-        /* 当输入框聚焦时，给一点平滑的过渡效果 */
-        input:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-            border-color: rgb(59 130 246);
-        }
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        input:focus { outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); border-color: rgb(59 130 246); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <div class="container mx-auto max-w-lg p-4">
         
-        <!-- 页面标题 -->
         <header class="text-center my-6">
             <h1 class="text-3xl font-bold text-gray-700">我的烹饪日记</h1>
-            <p class="text-gray-500 mt-1">记录每一次的美味创作</p>
+            <p class="text-gray-500 mt-1">云同步版</p>
         </header>
 
-        <!-- 添加新菜品的表单 -->
         <div class="bg-white p-6 rounded-xl shadow-md mb-8">
             <form id="add-dish-form">
                 <h2 class="text-xl font-semibold mb-4">添加一道新菜</h2>
                 <div class="space-y-4">
-                    <!-- 菜品名称输入框 -->
                     <div>
                         <label for="dish-name" class="block text-sm font-medium text-gray-600">菜品名称</label>
                         <input type="text" id="dish-name" required class="mt-1 block w-full p-3 border border-gray-300 rounded-lg transition" placeholder="例如：番茄炒蛋">
                     </div>
-                    <!-- 烹饪日期选择器 -->
                     <div>
                         <label for="dish-date" class="block text-sm font-medium text-gray-600">烹饪日期</label>
                         <input type="date" id="dish-date" required class="mt-1 block w-full p-3 border border-gray-300 rounded-lg transition">
                     </div>
-                    <!-- 图片链接输入框 -->
                     <div>
-                        <label for="dish-image" class="block text-sm font-medium text-gray-600">图片链接</label>
-                        <input type="url" id="dish-image" required class="mt-1 block w-full p-3 border border-gray-300 rounded-lg transition" placeholder="请粘贴图片的 URL 地址">
-                        <p class="text-xs text-gray-400 mt-1">小提示：可以先把图片上传到图床网站，再粘贴链接。</p>
+                        <label for="dish-image" class="block text-sm font-medium text-gray-600">选择照片</label>
+                        <input type="file" id="dish-image" required accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     </div>
                 </div>
-                <!-- 提交按钮 -->
-                <button type="submit" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95">
-                    添加菜品
+                <button type="submit" id="submit-btn" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
+                    <span id="submit-btn-text">添加菜品</span>
+                    <div id="submit-loader" class="loader hidden"></div>
                 </button>
             </form>
         </div>
 
-        <!-- 展示所有菜品的列表 -->
         <main>
             <h2 class="text-xl font-semibold mb-4 text-center text-gray-600">我做过的菜</h2>
             <div id="dish-list" class="grid grid-cols-1 gap-6">
-                <!-- JavaScript 将会在这里动态添加菜品卡片 -->
-                <div id="empty-state" class="text-center py-10 px-4 bg-white rounded-xl shadow-md">
-                    <p class="text-gray-500">还没有记录任何菜品哦，快去添加吧！</p>
+                <div id="loading-state" class="text-center py-10 px-4 bg-white rounded-xl shadow-md">
+                    <p class="text-gray-500">正在从云端加载数据...</p>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- 引入 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-storage-compat.js"></script>
+
     <script>
+        // ===================================================================================
+        // TODO: 将这里替换成你自己的 Firebase 项目配置！(从指南的第二步获取)
+        // ===================================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAtCqRybYQPsVrGX9-44B7IWLGSghZDpgY",
+  authDomain: "cookingmaster-5b5a5.firebaseapp.com",
+  projectId: "cookingmaster-5b5a5",
+  storageBucket: "cookingmaster-5b5a5.firebasestorage.app",
+  messagingSenderId: "732735614743",
+  appId: "1:732735614743:web:3efc5a9e73d51aaaaa5152",
+  measurementId: "G-3TTH49RTPS"
+};
+
+
+        // ===================================================================================
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const dishesCollection = db.collection('dishes');
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('add-dish-form');
             const dishList = document.getElementById('dish-list');
-            const emptyState = document.getElementById('empty-state');
-
-            // 预设今天的日期到日期输入框
+            const loadingState = document.getElementById('loading-state');
             const dateInput = document.getElementById('dish-date');
+            const submitBtn = document.getElementById('submit-btn');
+            const submitBtnText = document.getElementById('submit-btn-text');
+            const submitLoader = document.getElementById('submit-loader');
+
             dateInput.valueAsDate = new Date();
 
-            // 从 localStorage 加载数据
-            let dishes = JSON.parse(localStorage.getItem('myDishes')) || [];
-
-            // 渲染所有菜品到页面
-            const renderDishes = () => {
-                // 先清空现有列表
-                dishList.innerHTML = ''; 
-
-                if (dishes.length === 0) {
-                    // 如果没有数据，显示空状态提示
-                    dishList.appendChild(emptyState);
-                    emptyState.style.display = 'block';
+            // 实时监听数据库变化
+            dishesCollection.orderBy('date', 'desc').onSnapshot(snapshot => {
+                dishList.innerHTML = ''; // 清空列表
+                if (snapshot.empty) {
+                    dishList.innerHTML = `
+                        <div class="text-center py-10 px-4 bg-white rounded-xl shadow-md">
+                            <p class="text-gray-500">还没有记录任何菜品哦，快去添加吧！</p>
+                        </div>`;
                 } else {
-                    // 如果有数据，则隐藏空状态并渲染列表
-                     if (emptyState.parentNode) {
-                        emptyState.style.display = 'none';
-                    }
-
-                    // 对菜品按日期倒序排序，最新的在最前面
-                    const sortedDishes = dishes.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                    sortedDishes.forEach(dish => {
+                    snapshot.forEach(doc => {
+                        const dish = doc.data();
                         const card = document.createElement('div');
-                        card.className = 'bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-300';
-                        
-                        // 使用 onerror 来处理图片加载失败的情况
+                        card.className = 'bg-white rounded-xl shadow-md overflow-hidden';
                         card.innerHTML = `
                             <img src="${dish.imageUrl}" alt="${dish.name}" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/e2e8f0/475569?text=图片加载失败';">
                             <div class="p-5">
@@ -118,65 +117,91 @@
                                 <p class="text-gray-500 text-sm mt-1">${dish.date}</p>
                             </div>
                             <div class="p-2 bg-gray-50 text-right">
-                                <button data-id="${dish.id}" class="delete-btn text-sm text-red-500 hover:text-red-700 font-medium py-1 px-3 rounded">删除</button>
+                                <button data-id="${doc.id}" data-image-path="${dish.imagePath}" class="delete-btn text-sm text-red-500 hover:text-red-700 font-medium py-1 px-3 rounded">删除</button>
                             </div>
                         `;
                         dishList.appendChild(card);
                     });
                 }
-            };
+            }, error => {
+                console.error("Error fetching dishes: ", error);
+                loadingState.textContent = '加载数据失败，请检查网络和 Firebase 配置。';
+            });
 
-            // 保存数据到 localStorage
-            const saveDishes = () => {
-                localStorage.setItem('myDishes', JSON.stringify(dishes));
-            };
-
-            // 处理表单提交事件
-            form.addEventListener('submit', (e) => {
-                e.preventDefault(); // 阻止表单默认的提交行为
-
+            // 处理表单提交
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
                 const name = document.getElementById('dish-name').value.trim();
                 const date = document.getElementById('dish-date').value;
-                const imageUrl = document.getElementById('dish-image').value.trim();
-                
-                // 简单验证
-                if (!name || !date || !imageUrl) {
-                    alert('请填写所有字段！');
+                const imageFile = document.getElementById('dish-image').files[0];
+
+                if (!name || !date || !imageFile) {
+                    alert('请填写所有字段并选择一张图片！');
                     return;
                 }
 
-                const newDish = {
-                    id: Date.now(), // 使用时间戳作为唯一ID
-                    name,
-                    date,
-                    imageUrl
-                };
+                // 显示加载动画
+                submitBtn.disabled = true;
+                submitBtnText.textContent = '上传中...';
+                submitLoader.classList.remove('hidden');
 
-                dishes.push(newDish);
-                saveDishes();
-                renderDishes();
+                try {
+                    // 1. 上传图片到 Firebase Storage
+                    const imagePath = `images/${Date.now()}_${imageFile.name}`;
+                    const storageRef = storage.ref(imagePath);
+                    const uploadTask = await storageRef.put(imageFile);
+                    
+                    // 2. 获取上传后图片的公开 URL
+                    const imageUrl = await uploadTask.ref.getDownloadURL();
 
-                form.reset(); // 清空表单
-                dateInput.valueAsDate = new Date(); // 重置日期为今天
-            });
+                    // 3. 将菜品信息和图片 URL 保存到 Firestore
+                    await dishesCollection.add({
+                        name,
+                        date,
+                        imageUrl,
+                        imagePath, // 保存图片路径，方便删除
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    form.reset();
+                    dateInput.valueAsDate = new Date();
 
-            // 处理删除事件（使用事件委托）
-            dishList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-btn')) {
-                    const idToDelete = Number(e.target.dataset.id);
-                    // 弹出一个确认框，防止误删
-                    if (confirm('确定要删除这道菜的记录吗？')) {
-                        dishes = dishes.filter(dish => dish.id !== idToDelete);
-                        saveDishes();
-                        renderDishes();
-                    }
+                } catch (error) {
+                    console.error("Error adding document: ", error);
+                    alert('添加失败，请查看控制台错误信息。');
+                } finally {
+                    // 恢复按钮状态
+                    submitBtn.disabled = false;
+                    submitBtnText.textContent = '添加菜品';
+                    submitLoader.classList.add('hidden');
                 }
             });
 
-            // 页面加载时，立即渲染一次
-            renderDishes();
+            // 处理删除
+            dishList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const docId = e.target.dataset.id;
+                    const imagePath = e.target.dataset.imagePath;
+
+                    if (confirm('确定要删除这条记录吗？这也会删除云端的照片。')) {
+                        try {
+                            // 从 Firestore 删除记录
+                            await dishesCollection.doc(docId).delete();
+                            
+                            // 从 Storage 删除图片
+                            if (imagePath) {
+                                await storage.ref(imagePath).delete();
+                            }
+
+                        } catch (error) {
+                            console.error("Error removing document: ", error);
+                            alert('删除失败，请查看控制台错误信息。');
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>
 </html>
-
